@@ -88,6 +88,7 @@ function CompanionPanel(props: Props) {
   const presented = usePanePresentation(() => props.companionPresented);
   return (
     <openclaw-chat-session-rail
+      prop:presentation={props.presentation}
       data-sidebar-panel-host
       ref={[panelHostRef(props.registerPanelHost)]}
       prop:presented={presented()}
@@ -113,6 +114,14 @@ function DesktopPanel(props: Props) {
   const presented = usePanePresentation(() => props.desktopPresented);
   return (
     <openclaw-desktop-panel
+      prop:presentation={
+        props.presentation
+          ? {
+              platform: props.presentation,
+              openWindowHref: props.presentation === "desktop" ? props.desktopFocusHref : undefined,
+            }
+          : undefined
+      }
       data-sidebar-panel-host
       ref={[panelHostRef(props.registerPanelHost)]}
       prop:embedded={true}
@@ -265,7 +274,7 @@ export function ClearCompanion(
         disabled={
           !props.connected || props.companion.turns.some((turn) => turn.status === "pending")
         }
-        onClick={() => props.onClearCompanion()}
+        onClick={() => void props.onClearCompanion()}
       >
         <Icon name="trash" />
       </button>
@@ -339,6 +348,7 @@ declare module "@solidjs/web" {
   namespace JSX {
     interface IntrinsicElements {
       "openclaw-chat-session-rail": HTMLAttributes<HTMLElement> & {
+        "prop:presentation"?: SidebarPanelDefinitionParams["presentation"];
         "prop:sessionKey"?: SidebarPanelDefinitionParams["state"]["sessionKey"];
         "prop:digest"?: SidebarPanelDefinitionParams["digest"];
         "prop:running"?: boolean;
