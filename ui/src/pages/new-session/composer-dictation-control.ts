@@ -2,6 +2,7 @@ import type { GatewayBrowserClient } from "../../api/gateway.ts";
 import { patchSettings } from "../../app/settings.ts";
 import { t } from "../../i18n/index.ts";
 import { registerNewSessionSetupEnglish } from "../../i18n/locales/en-new-session-setup.ts";
+import { listen } from "../../lib/reactive/listener.ts";
 import { ComposerDictationOwner } from "../chat/composer-dictation.ts";
 import { ComposerMicrophoneOwner } from "../chat/composer-microphone-picker.ts";
 import type { NewSessionComposerTextarea } from "./composer-textarea.ts";
@@ -16,20 +17,26 @@ type NewSessionDictationOptions = {
   onMessage: (message: string) => void;
   onError: (message: string) => void;
   onSubmit: () => void;
-  onChange: () => void;
 };
 
 /**
  * Dictation for the new-session draft. This surface has no Talk capability, so
  * its microphone enters the shared dictation session directly on click.
  */
-export class NewSessionDictationControl {
+export class NewSessionDictationControl extends EventTarget {
   private readonly devicePicker = new ComposerMicrophoneOwner();
   private session: ComposerDictationOwner | null = null;
   private owner: { key: string } | null = null;
 
   constructor(private readonly options: NewSessionDictationOptions) {
-    this.devicePicker.subscribe(options.onChange);
+    super();
+    this.devicePicker.subscribe(this.changed);
+  }
+
+  private readonly changed = () => this.dispatchEvent(new Event("change"));
+
+  subscribe(listener: () => void) {
+    return listen(this, "change", listener);
   }
 
   dispose(): void {
@@ -91,7 +98,7 @@ export class NewSessionDictationControl {
     };
     if (!this.session) {
       this.session = new ComposerDictationOwner(dictationOptions);
-      this.session.subscribe(this.options.onChange);
+      this.session.subscribe(this.changed);
     }
     this.session.update(dictationOptions);
     const dictation = this.session;

@@ -51,7 +51,7 @@ export type PageHost = SolidBridgeElement<
 >;
 
 export class NewSessionPageOwner {
-  private publish?: () => void;
+  private readonly listeners = new Set<() => void>();
   private contextSubscriptions: Array<() => void> = [];
   isConnected = false;
   private pendingChange = false;
@@ -70,13 +70,13 @@ export class NewSessionPageOwner {
         }
       });
     }
-    this.publish?.();
+    for (const listener of this.listeners) {
+      listener();
+    }
   };
   subscribe(listener: () => void) {
-    this.publish = listener;
-    return () => {
-      this.publish = undefined;
-    };
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
   context?: ApplicationContext;
   get data() {
@@ -193,8 +193,8 @@ export class NewSessionPageOwner {
       onMessage: (message) => this.setMessageFromUser(message),
       onError: (message) => this.submission.setError(message),
       onSubmit: () => void this.submission.submit(),
-      onChange: this.changed,
     });
+    this.dictation.subscribe(this.changed);
   }
 
   focusComposer(): void {
