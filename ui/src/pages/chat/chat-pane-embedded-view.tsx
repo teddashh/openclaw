@@ -14,7 +14,6 @@ import { usePanePresentation } from "./chat-pane-presentation.ts";
 import { ChatBoardPanel } from "./chat-pane-surfaces.tsx";
 import { resolveChatAttachmentLimits } from "./components/chat-attachment-admission.ts";
 import { ChatDetailSlot } from "./components/chat-detail-slot-view.tsx";
-import { SessionWorkspaceRail } from "./components/chat-session-workspace-rail-solid.tsx";
 import {
   closeSessionWorkspacePreview,
   selectSessionWorkspacePreview,
@@ -163,7 +162,6 @@ function PortalPanel(props: Props) {
 }
 
 function WorkspacePanel(props: Props & { workspaceState: SessionWorkspaceState }) {
-  const browser = <SessionWorkspaceRail workspace={props.workspace} />;
   const Detail = (detail: { content: SidebarContent }) => (
     <ChatDetailSlot {...props.detail} content={detail.content} />
   );
@@ -175,7 +173,7 @@ function WorkspacePanel(props: Props & { workspaceState: SessionWorkspaceState }
       prop:tabsInHeader={sidebarMainPanel(props.state.sidebarLayout)?.slot !== "workspace"}
       prop:previews={presented() ? props.workspaceState.previews : []}
       prop:activeId={presented() ? props.workspaceState.activePreviewId : null}
-      prop:browser={browser}
+      prop:workspace={props.workspace}
       prop:renderDetail={Detail}
       prop:onSelect={(id: string | null) => selectSessionWorkspacePreview(props.state, id)}
       prop:onClose={(id: string) => closeSessionWorkspacePreview(props.state, id)}
