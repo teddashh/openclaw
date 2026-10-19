@@ -4,8 +4,8 @@ import { expect, it } from "vitest";
 import type { GatewaySessionRow } from "../api/types.ts";
 import type { UiSettings } from "../app/settings.ts";
 import {
-  closeChatLayoutMenu,
-  openChatLayoutMenu as openLayoutMenu,
+  closeChatDashboardMenu,
+  openChatDashboardMenu,
   selectChatLayoutAction,
 } from "../test-helpers/chat-layout-menu.ts";
 import {
@@ -98,7 +98,7 @@ async function openDashboard(
 }
 
 async function openDefaultAction(page: Page) {
-  const menu = await openLayoutMenu(page);
+  const menu = await openChatDashboardMenu(page);
   const action = menu.locator(defaultAction);
   await action.waitFor({ state: "visible" });
   return action;
@@ -129,7 +129,7 @@ suite.define(() => {
       await page.locator("openclaw-board-view").waitFor({ state: "visible" });
       const chat = page.locator('openclaw-chat-pane[aria-hidden="false"] .sidebar-region__primary');
       await chat.waitFor({ state: "hidden" });
-      const menu = await openLayoutMenu(page);
+      const menu = await openChatDashboardMenu(page);
       await menu.locator(`${defaultAction}, ${defaultStatus}`).waitFor({ state: "visible" });
       await page.screenshot({
         path: path.join(suite.artifactDir, "07-unset-opening-view-menu.png"),
@@ -147,10 +147,10 @@ suite.define(() => {
       });
       await page.getByText("Dashboard default saved for future opens.", { exact: true }).waitFor();
       await expect.poll(() => sidebarLink.getAttribute("href")).toContain("/dashboard/main/");
-      const savedMenu = await openLayoutMenu(page);
+      const savedMenu = await openChatDashboardMenu(page);
       await savedMenu.locator(defaultStatus).waitFor({ state: "visible" });
       await page.screenshot({ path: path.join(suite.artifactDir, "08-opening-default-saved.png") });
-      await closeChatLayoutMenu(page);
+      await closeChatDashboardMenu(page);
       // This fixture can read Sessions but does not advertise Home or session creation.
       await page.locator('[data-navigation-view="pages"]').click();
       await page
@@ -245,7 +245,7 @@ suite.define(() => {
       const chat = page.locator(".sidebar-region__primary");
       await chat.waitFor({ state: "visible" });
       expect(await page.locator(defaultAction).count()).toBe(0);
-      const matchingMenu = await openLayoutMenu(page);
+      const matchingMenu = await openChatDashboardMenu(page);
       const matchingStatus = matchingMenu.locator(defaultStatus);
       await matchingStatus.waitFor({ state: "visible" });
       expect(await matchingStatus.textContent()).toContain("This is the default view");
@@ -254,7 +254,7 @@ suite.define(() => {
       );
       expect(await gateway.getRequests("sessions.patch")).toHaveLength(0);
       await page.screenshot({ path: path.join(suite.artifactDir, "00-current-default-menu.png") });
-      await closeChatLayoutMenu(page);
+      await closeChatDashboardMenu(page);
 
       await focusChatSidePanel(page);
       await chat.waitFor({ state: "hidden" });
@@ -276,13 +276,13 @@ suite.define(() => {
       });
       await page.getByText("Dashboard default saved for future opens.", { exact: true }).waitFor();
       await expect.poll(() => page.locator(defaultAction).count()).toBe(0);
-      const savedMenu = await openLayoutMenu(page);
+      const savedMenu = await openChatDashboardMenu(page);
       await savedMenu.locator(defaultStatus).waitFor({ state: "visible" });
       expect(await savedMenu.locator(defaultStatus).textContent()).toContain(
         "This is the default view",
       );
       await page.screenshot({ path: path.join(suite.artifactDir, "02-default-saved.png") });
-      await closeChatLayoutMenu(page);
+      await closeChatDashboardMenu(page);
 
       await suite.withPage(
         { viewport: { width: 1440, height: 1000 } },
@@ -294,7 +294,7 @@ suite.define(() => {
           await reconnectMockGateway(reader, readerGateway);
           await reader.locator("openclaw-board-view").waitFor({ state: "visible" });
           await readerChat.waitFor({ state: "hidden" });
-          const readerMenu = await openLayoutMenu(reader);
+          const readerMenu = await openChatDashboardMenu(reader);
           await readerMenu.locator(defaultStatus).waitFor({ state: "visible" });
           expect(await readerMenu.locator(defaultStatus).textContent()).toContain(
             "This is the default view",
@@ -303,7 +303,7 @@ suite.define(() => {
           await reader.screenshot({
             path: path.join(suite.artifactDir, "03-new-viewer-inherits.png"),
           });
-          await closeChatLayoutMenu(reader);
+          await closeChatDashboardMenu(reader);
           await selectChatLayoutAction(reader, "Restore split");
           await readerChat.waitFor({ state: "visible" });
           expect(await presentationOverride(reader)).toBe("split");
@@ -342,13 +342,47 @@ suite.define(() => {
     });
   });
 
-  it("offers the same conditional action in the compact menu without persisting deep-link intent", async () => {
+  it("offers the same Dashboard options action on mobile without persisting deep-link intent", async () => {
     await suite.withPage({ viewport: { width: 390, height: 844 } }, async ({ page }) => {
       const gateway = await openDashboard(page, "split", { expandedLink: true });
-      await page.locator(".sidebar-region__primary").waitFor({ state: "hidden" });
+      const chat = page.locator(".sidebar-region__primary");
+      await chat.waitFor({ state: "visible" });
+      await page.locator(".chat-mobile-host openclaw-board-view").waitFor();
       expect(await presentationOverride(page)).toBeUndefined();
+      await selectChatLayoutAction(page, "Focus");
+      await page
+        .locator(".chat-mobile-host__header")
+        .getByRole("button", { name: "Restore", exact: true })
+        .waitFor();
+      expect(await presentationOverride(page)).toBeUndefined();
+      await selectChatLayoutAction(page, "Restore split");
+      await page
+        .locator(".chat-mobile-host__header")
+        .getByRole("button", { name: "Expand Side panel", exact: true })
+        .waitFor();
+      // Mobile keeps Chat beside its sheet; the deep link still owns desktop presentation.
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await chat.waitFor({ state: "hidden" });
+      expect(await presentationOverride(page)).toBeUndefined();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await chat.waitFor({ state: "visible" });
+      await page.getByRole("button", { name: "Dashboard options", exact: true }).waitFor();
+      await page.screenshot({
+        path: path.join(suite.artifactDir, "05-mobile-dashboard-options.png"),
+        animations: "disabled",
+      });
       await openDefaultAction(page);
-      await page.screenshot({ path: path.join(suite.artifactDir, "05-compact-default-menu.png") });
+      expect(
+        await page
+          .getByRole("menuitem", {
+            name: /^(Swap Chat and Dashboard|Expand Dashboard|Restore split)$/,
+          })
+          .count(),
+      ).toBe(0);
+      await page.screenshot({
+        path: path.join(suite.artifactDir, "05-compact-default-menu.png"),
+        animations: "disabled",
+      });
       await selectChatLayoutAction(page, "Use current view as default");
       await gateway.waitForRequest("sessions.patch", { match: { boardPresentation: "expanded" } });
       const savedMessage = page.getByText("Dashboard default saved for future opens.", {
@@ -359,12 +393,30 @@ suite.define(() => {
       await savedToast.getByRole("button", { name: "Dismiss", exact: true }).click();
       await savedToast.waitFor({ state: "hidden" });
       await expect.poll(() => page.locator(defaultAction).count()).toBe(0);
-      const savedMenu = await openLayoutMenu(page);
+      const savedTrigger = page.getByRole("button", { name: "Dashboard options", exact: true });
+      await savedTrigger.focus();
+      await savedTrigger.press("ArrowDown");
+      const savedMenu = page.getByRole("menu", { name: "Dashboard options", exact: true });
+      await savedMenu.waitFor();
       await savedMenu.locator(defaultStatus).waitFor({ state: "visible" });
+      expect(await savedMenu.getByRole("menuitem").getAttribute("aria-disabled")).toBe("true");
       expect(await savedMenu.locator(defaultStatus).textContent()).toContain(
         "This is the default view",
       );
-      await page.screenshot({ path: path.join(suite.artifactDir, "06-compact-default-saved.png") });
+      expect(
+        (await savedTrigger.evaluate((element) => element === document.activeElement)) ||
+          (await savedMenu.evaluate((element) => element.contains(document.activeElement))),
+      ).toBe(true);
+      await page.screenshot({
+        path: path.join(suite.artifactDir, "06-compact-default-saved.png"),
+        animations: "disabled",
+      });
+      await page.keyboard.press("Escape");
+      await savedMenu.waitFor({ state: "hidden" });
+      expect(await savedTrigger.evaluate((element) => element === document.activeElement)).toBe(
+        true,
+      );
+      expect(await gateway.getRequests("sessions.patch")).toHaveLength(1);
       expect(await presentationOverride(page)).toBeUndefined();
     });
   });
