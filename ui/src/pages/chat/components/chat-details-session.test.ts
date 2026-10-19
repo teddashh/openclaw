@@ -528,8 +528,11 @@ it.each([
   "/home/private-user/.openclaw/workspace/",
   "C:\\Users\\private-user\\.openclaw\\workspace\\",
 ])("keeps an unlabelled workspace's private parent path out of Details: %s", async (root) => {
-  const element = await mount({ detailsWorkspace: { root, label: null } });
+  const element = await mount({
+    detailsWorkspace: { root, label: null, branch: "feature/details" },
+  });
   const environment = element.querySelector('[data-details-group="environment"]')!;
+  expect(environment.textContent).toContain("feature/details");
   expect(environment.textContent).not.toContain(root);
   expect(environment.textContent).not.toContain("private-user");
   const openProject = vi.fn();
@@ -544,6 +547,13 @@ it.each([
   expect(project.textContent).toBe("workspace");
   expect(view.container.textContent).not.toContain(root);
   expect(view.container.textContent).not.toContain("private-user");
+  for (const metadata of [
+    ...environment.querySelectorAll("[title], [aria-label]"),
+    ...view.container.querySelectorAll("[title], [aria-label]"),
+  ]) {
+    expect(metadata.getAttribute("title") ?? "").not.toContain("private-user");
+    expect(metadata.getAttribute("aria-label") ?? "").not.toContain("private-user");
+  }
   project.click();
   expect(openProject).toHaveBeenCalledOnce();
 });
