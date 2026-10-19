@@ -5,9 +5,8 @@ import { registerDesktopEnglish } from "../../i18n/locales/en-desktop.ts";
 import { t, registerEnglishCatalog } from "../../lib/reactive/i18n.ts";
 import { Icon } from "../solid/icon.tsx";
 import { Menu, type MenuEntry, type MenuItem } from "../solid/menu.tsx";
-import type { DesktopSizingMode } from "./desktop-client.ts";
 import { DesktopIcon } from "./desktop-icon.tsx";
-import type { DesktopPanelState } from "./desktop-panel-state.ts";
+import type { DesktopPanelState, DesktopSizingMode } from "./desktop-panel-state.ts";
 import "../../styles/session-panel-rail.css";
 
 registerEnglishCatalog(registerDesktopEnglish);
