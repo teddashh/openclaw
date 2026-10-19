@@ -24,7 +24,7 @@ import {
 import type { TerminalInputs, TerminalPanelSessionTab } from "./terminal-panel-session-types.ts";
 import { terminalPanelTabIcon, terminalPanelHostedTabs } from "./terminal-panel-tabs.tsx";
 import { createTerminalPanelUpload, type TerminalPanelUpload } from "./terminal-panel-upload.ts";
-import type { TerminalPanelViewState } from "./terminal-panel-view.tsx";
+import type { TerminalPanelViewState } from "./terminal-panel-view-types.ts";
 import { createTerminalSessionPicker } from "./terminal-session-picker.ts";
 
 // Clone the SVG itself: insertion consumes a fragment and loses its replacement boundary.
@@ -263,7 +263,8 @@ export function createTerminalPanel(
       client: () => (element.gatewayConnected && element.available ? element.client : null),
       available: () => element.available,
       hosted: () => element.embedded,
-      initialOpen: () => element.embedded && !element.mobile,
+      initialOpen: () =>
+        element.embedded && !element.mobile && !(element.page && element.routeTarget),
       connected: () => element.gatewayConnected,
       currentSessionIds: () =>
         new Set(terminalSessions.state.tabs.map((tab) => tab.gatewaySessionId).filter(Boolean)),
@@ -517,6 +518,7 @@ export function createTerminalPanel(
           if (
             !activeTab ||
             activeTab.status !== "live" ||
+            activeTab.controller.readOnly ||
             !element.available ||
             !element.gatewayConnected ||
             !owner.isConnected ||

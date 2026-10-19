@@ -1,0 +1,40 @@
+import type { DockLayout } from "../dock-layout.ts";
+import type { TerminalPanelTab } from "./terminal-panel-tabs.tsx";
+import type { TerminalPanelUpload } from "./terminal-panel-upload.ts";
+import type { createTerminalSessionPicker } from "./terminal-session-picker.ts";
+
+type TerminalSessionPickerState = ReturnType<typeof createTerminalSessionPicker>;
+
+export type TerminalPanelViewState = {
+  open: boolean;
+  embedded: boolean;
+  fullscreen: boolean;
+  hosted: boolean;
+  mobile: boolean;
+  activeTab: TerminalPanelTab | undefined;
+  draft: string;
+  attachments: readonly { name: string; path: string }[];
+  onRemoveAttachment: (index: number) => void;
+  onDraft: (text: string) => void;
+  onSubmit: () => void;
+  mode: string;
+  style: string | undefined;
+  dockLayout: DockLayout<"bottom" | "right" | "main">;
+  tabs: TerminalPanelTab[];
+  activeId: string | null;
+  booting: boolean;
+  connected: boolean;
+  connecting: boolean;
+  error: { text: string; retry?: () => void } | null;
+  dockDisabled: boolean;
+  picker: TerminalSessionPickerState;
+  upload: TerminalPanelUpload;
+  fileInputRef: (element: HTMLInputElement) => void;
+  viewportRef: (element: HTMLDivElement) => void;
+  onSelect: (id: string) => void;
+  onClose: (id: string) => Promise<void>;
+  onNew: () => void;
+  onDock: (dock: "bottom" | "right" | "main") => void;
+  onOpenFullscreen: () => void;
+  onHide: () => void;
+};

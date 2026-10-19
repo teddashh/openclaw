@@ -3,17 +3,11 @@ import { t } from "../../lib/reactive/i18n.ts";
 import { createTabFocus } from "../../lib/tabs.ts";
 import { generateUUID } from "../../lib/uuid.ts";
 import { DockResizer } from "../dock-layout-solid.tsx";
-import type { DockLayout } from "../dock-layout.ts";
 import { PanelTabStrip } from "../panel-tab-strip-solid.tsx";
 import { Icon } from "../solid/icon.tsx";
 import type { PanelEmptyStateElement, PanelEmptyStateProps } from "../solid/panel-empty-state.tsx";
 import "../solid/panel-empty-state.tsx";
-import {
-  terminalPanelTabIcon,
-  terminalPanelHostedTabs,
-  type TerminalPanelTab,
-} from "./terminal-panel-tabs.tsx";
-import type { TerminalPanelUpload } from "./terminal-panel-upload.ts";
+import { terminalPanelTabIcon, terminalPanelHostedTabs } from "./terminal-panel-tabs.tsx";
 import {
   ActionButton,
   Actions,
@@ -21,7 +15,7 @@ import {
   SessionMenu,
   TerminalRail,
 } from "./terminal-panel-view-chrome.tsx";
-import type { createTerminalSessionPicker } from "./terminal-session-picker.ts";
+import type { TerminalPanelViewState } from "./terminal-panel-view-types.ts";
 
 declare module "@solidjs/web" {
   namespace JSX {
@@ -33,42 +27,6 @@ declare module "@solidjs/web" {
     }
   }
 }
-
-type TerminalSessionPickerState = ReturnType<typeof createTerminalSessionPicker>;
-
-export type TerminalPanelViewState = {
-  open: boolean;
-  embedded: boolean;
-  fullscreen: boolean;
-  hosted: boolean;
-  mobile: boolean;
-  activeTab: TerminalPanelTab | undefined;
-  draft: string;
-  attachments: readonly { name: string; path: string }[];
-  onRemoveAttachment: (index: number) => void;
-  onDraft: (text: string) => void;
-  onSubmit: () => void;
-  mode: string;
-  style: string | undefined;
-  dockLayout: DockLayout<"bottom" | "right" | "main">;
-  tabs: TerminalPanelTab[];
-  activeId: string | null;
-  booting: boolean;
-  connected: boolean;
-  connecting: boolean;
-  error: { text: string; retry?: () => void } | null;
-  dockDisabled: boolean;
-  picker: TerminalSessionPickerState;
-  upload: TerminalPanelUpload;
-  fileInputRef: (element: HTMLInputElement) => void;
-  viewportRef: (element: HTMLDivElement) => void;
-  onSelect: (id: string) => void;
-  onClose: (id: string) => Promise<void>;
-  onNew: () => void;
-  onDock: (dock: "bottom" | "right" | "main") => void;
-  onOpenFullscreen: () => void;
-  onHide: () => void;
-};
 
 function UploadLayer(props: { state: TerminalPanelViewState }) {
   const progress = createMemo(() => props.state.upload.progress());
