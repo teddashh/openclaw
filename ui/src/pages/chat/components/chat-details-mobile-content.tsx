@@ -53,8 +53,8 @@ import type { ChatSessionSharingMobileAdapter } from "./chat-session-sharing-mob
 import {
   ChatSessionAccessMobile,
   ChatSessionSharingMobile,
-  ChatSessionSharingOptions,
 } from "./chat-session-sharing-mobile.tsx";
+import { ChatSessionSharingOptions } from "./chat-session-sharing-options.tsx";
 import {
   ChatSessionVersionsMobile,
   type ChatSessionVersionsMobileProps,

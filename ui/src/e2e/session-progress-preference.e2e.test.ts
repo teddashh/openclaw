@@ -3,7 +3,7 @@ import {
   controlUiBundledSettingsStorageKey,
   waitForControlUiSettingsTakeover,
 } from "../test-helpers/control-ui-e2e.ts";
-import { openChatDetails } from "./chat-details.test-support.ts";
+import { closeChatDetails, openChatTaskProgress } from "./chat-details.test-support.ts";
 import {
   captureUiProof,
   chatSessionListResponse,
@@ -15,10 +15,10 @@ import {
 const suite = createChatFlowE2eSuite();
 
 suite.define(() => {
-  it("hides and restores Details progress across tabs and reloads without clearing it", async () => {
+  it("hides and restores chat progress across tabs and reloads while keeping saved Details", async () => {
     const sessionKey = "agent:main:progress-preference";
     await suite.withPage(
-      { colorScheme: "dark", locale: "en-US", viewport: { width: 1280, height: 900 } },
+      { colorScheme: "dark", locale: "en-US", viewport: { width: 390, height: 900 } },
       async ({ page, context }) => {
         const cardData = {
           sessionKey,
@@ -60,12 +60,15 @@ suite.define(() => {
           },
         });
         await page.goto(controlUiSessionUrl(suite.server.baseUrl, sessionKey));
-        const card = page.locator('[data-progress-card-placement="details"]');
-        await openChatDetails(page);
-        await expect.poll(() => card.isVisible()).toBe(true);
+        const pill = page.locator('.activity-pill[data-family="progress"]');
+        await pill.waitFor();
+        const progress = await openChatTaskProgress(page);
+        await progress.locator(".task-progress-details__plan").waitFor();
+        await closeChatDetails(page);
         await captureUiProof(suite, page, "progress-preference", "01-cards-enabled.png");
 
         const settingsPage = await context.newPage();
+        await settingsPage.setViewportSize({ width: 1280, height: 900 });
         const settingsGateway = await installMockGateway(settingsPage, { sessionKey });
         await settingsPage.goto(
           `${suite.server.baseUrl}settings/appearance?section=__appearance__#settings-appearance-chat`,
@@ -92,7 +95,7 @@ suite.define(() => {
         await showRow.click();
         await expect.poll(enabled).toBe(false);
         await expect.poll(() => collapseRow.getByRole("switch").isDisabled()).toBe(true);
-        await expect.poll(() => card.count()).toBe(0);
+        await expect.poll(() => pill.count()).toBe(0);
         await captureUiProof(suite, settingsPage, "progress-preference", "03-setting-disabled.png");
         await captureUiProof(suite, page, "progress-preference", "04-cards-hidden.png");
 
@@ -105,20 +108,40 @@ suite.define(() => {
           },
         });
         await gateway.emitGatewayEvent("progressCard.changed", { sessionKey, revision: 2 });
-        expect((await gateway.getRequests("progressCard.get")).length).toBe(reads);
+        await expect
+          .poll(async () => (await gateway.getRequests("progressCard.get")).length)
+          .toBeGreaterThan(reads);
+        await openChatTaskProgress(page);
+        await expect
+          .poll(() => progress.textContent())
+          .toContain("The task progressed while the card was hidden.");
+        await closeChatDetails(page);
+        expect(await pill.count()).toBe(0);
+        // Each page-owned request log resets on reload; prove the first phase before losing it.
+        expect(await gateway.getRequests("progressCard.put")).toHaveLength(0);
+        expect(await gateway.getRequests("chat.abort")).toHaveLength(0);
+        expect(await settingsGateway.getRequests("config.patch")).toHaveLength(0);
         await page.reload();
         await page.locator(".agent-chat__composer-combobox textarea").waitFor({ state: "visible" });
-        expect(await card.count()).toBe(0);
-        // The page-owned mock request log restarts on reload.
-        expect(await gateway.getRequests("progressCard.get")).toHaveLength(0);
+        expect(await pill.count()).toBe(0);
+        // The preference hides chat presentation; saved Details still reads current progress.
+        await gateway.waitForRequest("progressCard.get");
+        await openChatTaskProgress(page);
+        await expect
+          .poll(() => progress.textContent())
+          .toContain("The task progressed while the card was hidden.");
+        await closeChatDetails(page);
+        expect(await pill.count()).toBe(0);
         await settingsPage.reload();
         await waitForControlUiSettingsTakeover(settingsPage);
         await expect.poll(enabled).toBe(false);
 
         await showRow.click();
         await expect.poll(enabled).toBe(true);
-        await openChatDetails(page);
-        await expect.poll(() => card.isVisible()).toBe(true);
+        await pill.waitFor();
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.locator(".chat-details-toggle").waitFor();
+        const card = await openChatTaskProgress(page);
         await expect
           .poll(() => card.textContent())
           .toContain("The task progressed while the card was hidden.");
