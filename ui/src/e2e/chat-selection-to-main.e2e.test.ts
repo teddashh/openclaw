@@ -179,7 +179,7 @@ suite.define(() => {
             expect(await composer.inputValue()).toBe(draft);
           }
           const chip = side.locator(".chat-selection-annotations__chip");
-          if (scenario === "normal") {
+          if (scenario !== "oversized selection") {
             await chip.waitFor({ state: "visible" });
           }
           expect(await chip.count()).toBe(scenario === "oversized selection" ? 0 : 1);
