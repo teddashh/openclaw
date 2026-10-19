@@ -1,3 +1,4 @@
+import { HEARTBEAT_RESPONSE_TOOL_NAME } from "../../../auto-reply/heartbeat-tool-response.js";
 import { clearBatchAdmittedToolCallsForRun } from "../../agent-tools.before-tool-call.state.js";
 import type { HookContext } from "../../agent-tools.before-tool-call.types.js";
 import { normalizeCodeModeExecBeforeHookParams } from "../../code-mode-control-tools.js";
@@ -8,6 +9,7 @@ import {
 } from "../../runtime/internal-hooks.js";
 import { admitToolCallBatch } from "../../tool-loop-admission.js";
 import { hashToolCall } from "../../tool-loop-detection.js";
+import { readToolResultDetails } from "../../tool-result-error.js";
 import { log } from "../logger.js";
 
 /** Build the embedded-runner's private bridge into agent-core loop recovery. */
@@ -53,9 +55,34 @@ export function createToolLoopBatchAdmission(
   };
 }
 
-/** Ensure calls blocked by later policies cannot leave run-scoped admission markers behind. */
+/** Bound heartbeat retries and clean up run-scoped batch admission markers. */
 export function installToolLoopRecoveryCleanup(params: { agent: Agent; runId: string }): void {
+  let consecutiveHeartbeatCalls = 0;
+  const prepareNextTurnWithContext = params.agent.prepareNextTurnWithContext;
+  params.agent.prepareNextTurnWithContext = async (context, signal) => {
+    // Count finalized results, including schema failures, at the batch boundary.
+    // Already-admitted calls settle before we stop the next model request.
+    for (const result of context.toolResults) {
+      if (result.toolName === HEARTBEAT_RESPONSE_TOOL_NAME && !result.isError) {
+        const status = readToolResultDetails(result)?.status;
+        if (status === "accepted" || status === "already_accepted") {
+          return { stop: true };
+        }
+      }
+      consecutiveHeartbeatCalls =
+        result.toolName === HEARTBEAT_RESPONSE_TOOL_NAME ? consecutiveHeartbeatCalls + 1 : 0;
+      if (consecutiveHeartbeatCalls >= 3) {
+        return { stop: true };
+      }
+    }
+    return prepareNextTurnWithContext
+      ? prepareNextTurnWithContext.call(params.agent, context, signal)
+      : params.agent.prepareNextTurn?.(signal);
+  };
   params.agent.subscribe((event) => {
+    if (event.type === "agent_start") {
+      consecutiveHeartbeatCalls = 0;
+    }
     if (event.type === "agent_end") {
       clearBatchAdmittedToolCallsForRun(params.runId);
     }

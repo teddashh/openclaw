@@ -198,7 +198,7 @@ describe("synchronous context accounting", () => {
 });
 
 describe("fenced output and compaction retries", () => {
-  it("preserves an accepted heartbeat response and private scratch through compaction retry", async () => {
+  it("preserves the first accepted heartbeat response and scratch through duplicates and retry", async () => {
     const onHeartbeatToolResponse = vi.fn();
     const { emit, subscription } = createSubscribedSessionHarness({
       runId: "run-heartbeat-compaction",
@@ -231,7 +231,40 @@ describe("fenced output and compaction retries", () => {
     await subscription.waitForPendingEvents();
     expect(subscription.getHeartbeatToolResponse()).toEqual(response);
 
+    const changedResponse = {
+      outcome: "no_change",
+      notify: false,
+      summary: "A different decision after acceptance.",
+      scratch: "Replacement scratch must not be applied.",
+    };
+    emit({
+      type: "tool_execution_start",
+      toolName: tool.name,
+      toolCallId: "duplicate",
+      args: changedResponse,
+    });
+    emit({
+      type: "tool_execution_end",
+      toolName: tool.name,
+      toolCallId: "duplicate",
+      isError: false,
+      result: await tool.execute("duplicate", changedResponse),
+    });
     emit(completedCompactionEnd());
+    const retryTool = createHeartbeatResponseTool();
+    emit({
+      type: "tool_execution_start",
+      toolName: retryTool.name,
+      toolCallId: "retry",
+      args: changedResponse,
+    });
+    emit({
+      type: "tool_execution_end",
+      toolName: retryTool.name,
+      toolCallId: "retry",
+      isError: false,
+      result: await retryTool.execute("retry", changedResponse),
+    });
     const assistant = makeAgentAssistantMessage({
       content: [{ type: "text", text: "Internal retry fallback." }],
     });

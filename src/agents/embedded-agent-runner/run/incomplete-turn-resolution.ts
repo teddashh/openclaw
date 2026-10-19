@@ -96,6 +96,7 @@ export function resolveIncompleteTurnPayloadText(params: {
     params.attempt.clientToolCalls ||
     params.attempt.yieldDetected ||
     params.attempt.didSendDeterministicApprovalPrompt ||
+    params.attempt.heartbeatToolResponse ||
     params.attempt.lastToolError ||
     params.hasIntentionalTerminalCompletion
   ) {
