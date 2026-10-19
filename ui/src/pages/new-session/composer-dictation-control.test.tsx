@@ -109,6 +109,7 @@ function fixture(
     onMessage,
     onError,
     onSubmit,
+    onChange: vi.fn(),
     ...options,
   });
   return { control, captureSelection, insertTranscript, onMessage, onError, onSubmit };

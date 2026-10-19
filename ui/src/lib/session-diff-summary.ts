@@ -26,14 +26,12 @@ export function createSessionDiffSummary(document: Document, isConnected = () =>
   let unsubscribe: (() => void) | undefined;
   let current = empty();
   const entries = new Map<string, Entry>();
-  const listeners = new Set<() => void>();
+  let render: (() => void) | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending = false;
   let disposed = false;
   const publish = () => {
-    for (const listener of listeners) {
-      listener();
-    }
+    render?.();
   };
   const clearTimer = () => {
     clearTimeout(timer);
@@ -168,9 +166,9 @@ export function createSessionDiffSummary(document: Document, isConnected = () =>
       return current;
     },
     subscribe(listener: () => void) {
-      listeners.add(listener);
+      render = listener;
       return () => {
-        listeners.delete(listener);
+        render = undefined;
       };
     },
     update(next: Input) {
@@ -196,7 +194,7 @@ export function createSessionDiffSummary(document: Document, isConnected = () =>
       lifecycle?.dispose();
       stopVisibility();
       entries.clear();
-      listeners.clear();
+      render = undefined;
     },
   };
 }

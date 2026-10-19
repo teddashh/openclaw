@@ -47,7 +47,7 @@ function sameChatPanePresence(
 /** Own raw presence synchronously; only chat-visible changes publish to retained views. */
 export function createChatPanePresence(scope: () => ChatPresenceScope) {
   let payload: PresencePayload | undefined;
-  const listeners = new Set<() => void>();
+  let render: (() => void) | undefined;
   return {
     get snapshot() {
       return payload;
@@ -56,14 +56,14 @@ export function createChatPanePresence(scope: () => ChatPresenceScope) {
       const previous = payload;
       payload = next;
       if (!sameChatPanePresence(previous, next, scope())) {
-        for (const listener of listeners) {
-          listener();
-        }
+        render?.();
       }
     },
     subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
+      render = listener;
+      return () => {
+        render = undefined;
+      };
     },
   };
 }

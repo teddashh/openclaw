@@ -31,6 +31,12 @@ or dispose the authoritative owner.
 Event consumers subscribe directly to their owners, preserving each channel's
 delivery order, replay behavior, and completion contract.
 
+For a private leaf owner created with its view, `projectCallbackOwner(create, read)`
+supplies its sole notification callback and returns `{ owner, view }`. The view
+uses the same lazy observation and disposal contract, without requiring a
+subscription API on the leaf. Retained owners that outlive a view still need a
+rebindable subscription; use `projectOwner` for those lifetimes.
+
 ## Adapter families
 
 | Module                   | Owners                                                            |
